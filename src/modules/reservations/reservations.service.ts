@@ -31,6 +31,7 @@ export class ReservationsService {
    * - Existencia y vigencia activa del espacio.
    * - Existencia y vigencia activa del usuario solicitante.
    * - Anticipación mínima de 2 horas.
+   * - Duración máxima de 4 horas consecutivas (240 minutos).
    * - Ausencia de solapamiento horario con reservas activas (PENDIENTE o APROBADA).
    */
   public crearSolicitud(

@@ -213,6 +213,106 @@ describe('Flujo de Reservas y Modelos de Datos (OpenSpec Validation)', () => {
         );
       }).toThrow(DomainValidationError);
     });
+
+    test('Debe rechazar la reserva con código 422 si la duración es de 4 horas y 1 minuto (241 minutos)', () => {
+      const ahora = new Date('2026-11-01T10:00:00.000Z');
+      const inicio = new Date('2026-11-01T12:00:00.000Z'); // 2 horas de anticipación
+      const fin = new Date('2026-11-01T16:01:00.000Z'); // 4 horas y 1 minuto
+
+      try {
+        crearReserva(
+          {
+            espacioId: 'esp-1',
+            usuarioId: 'usr-1',
+            fechaHoraInicio: inicio,
+            fechaHoraFin: fin,
+            motivoAcademico: 'Taller extendido 4 horas y 1 minuto',
+          },
+          [],
+          ahora
+        );
+        throw new Error('Debería haber lanzado error de validación de duración');
+      } catch (error: any) {
+        expect(error).toBeInstanceOf(DomainValidationError);
+        expect(error.statusCode).toBe(422);
+        expect(error.message).toContain('4 horas');
+      }
+    });
+
+    test('Debe rechazar la reserva con código 422 si la duración es de 5 horas', () => {
+      const ahora = new Date('2026-11-01T10:00:00.000Z');
+      const inicio = new Date('2026-11-01T12:00:00.000Z');
+      const fin = new Date('2026-11-01T17:00:00.000Z'); // 5 horas consecutivas
+
+      try {
+        crearReserva(
+          {
+            espacioId: 'esp-1',
+            usuarioId: 'usr-1',
+            fechaHoraInicio: inicio,
+            fechaHoraFin: fin,
+            motivoAcademico: 'Maratón académica de 5 horas',
+          },
+          [],
+          ahora
+        );
+        throw new Error('Debería haber lanzado error de validación de duración');
+      } catch (error: any) {
+        expect(error).toBeInstanceOf(DomainValidationError);
+        expect(error.statusCode).toBe(422);
+        expect(error.message).toContain('4 horas');
+      }
+    });
+
+    test('Debe aceptar la solicitud con duración exacta de 4 horas (240 minutos) en estado PENDIENTE', () => {
+      const ahora = new Date('2026-11-01T10:00:00.000Z');
+      const inicio = new Date('2026-11-01T12:00:00.000Z');
+      const fin = new Date('2026-11-01T16:00:00.000Z'); // Exactamente 4 horas (240 minutos)
+
+      const reserva = crearReserva(
+        {
+          espacioId: 'esp-1',
+          usuarioId: 'usr-1',
+          fechaHoraInicio: inicio,
+          fechaHoraFin: fin,
+          motivoAcademico: 'Seminario de 4 horas exactas',
+        },
+        [],
+        ahora,
+        () => 'res-limite-4h'
+      );
+
+      expect(reserva.id).toBe('res-limite-4h');
+      expect(reserva.estado).toBe(EstadoReserva.PENDIENTE);
+      expect(reserva.fechaHoraInicio).toEqual(inicio);
+      expect(reserva.fechaHoraFin).toEqual(fin);
+      const duracionMinutos = (reserva.fechaHoraFin.getTime() - reserva.fechaHoraInicio.getTime()) / (1000 * 60);
+      expect(duracionMinutos).toBe(240);
+    });
+
+    test('Debe aceptar la solicitud con duración menor a 4 horas (ej. 2 horas) en estado PENDIENTE', () => {
+      const ahora = new Date('2026-11-01T10:00:00.000Z');
+      const inicio = new Date('2026-11-01T12:00:00.000Z');
+      const fin = new Date('2026-11-01T14:00:00.000Z'); // 2 horas (120 minutos)
+
+      const reserva = crearReserva(
+        {
+          espacioId: 'esp-1',
+          usuarioId: 'usr-1',
+          fechaHoraInicio: inicio,
+          fechaHoraFin: fin,
+          motivoAcademico: 'Clase de 2 horas',
+        },
+        [],
+        ahora,
+        () => 'res-2h-valida'
+      );
+
+      expect(reserva.id).toBe('res-2h-valida');
+      expect(reserva.estado).toBe(EstadoReserva.PENDIENTE);
+      const duracionMinutos = (reserva.fechaHoraFin.getTime() - reserva.fechaHoraInicio.getTime()) / (1000 * 60);
+      expect(duracionMinutos).toBe(120);
+    });
   });
 
   describe('Requisito: Prevención de Solapamiento Horario', () => {

@@ -1,4 +1,5 @@
 import { EstadoReserva, Reserva, CrearReservaDTO } from './types';
+export { EstadoReserva, Reserva, CrearReservaDTO };
 
 import { DomainValidationError, ConflictError } from '../../shared/errors';
 export { DomainValidationError, ConflictError };
@@ -29,7 +30,11 @@ export function verificarSolapamiento(
 
 /**
  * Valida y crea una nueva instancia de Reserva en estado PENDIENTE.
- * Regla: La hora de inicio debe tener al menos 2 horas de anticipación respecto al momento actual.
+ * Reglas de negocio:
+ * 1. La fecha de fin debe ser posterior a la fecha de inicio.
+ * 2. Ningún usuario podrá reservar un espacio académico durante más de cuatro horas consecutivas (240 minutos).
+ * 3. La hora de inicio debe tener al menos 2 horas de anticipación respecto al momento actual.
+ * 4. Ausencia de solapamiento con reservas activas (PENDIENTE o APROBADA).
  */
 export function crearReserva(
   dto: CrearReservaDTO,
@@ -40,6 +45,16 @@ export function crearReserva(
 
   if (dto.fechaHoraFin.getTime() <= dto.fechaHoraInicio.getTime()) {
     throw new DomainValidationError('La fecha de fin debe ser posterior a la fecha de inicio.', 422);
+  }
+
+  const cuatroHorasEnMs = 4 * 60 * 60 * 1000; // 240 minutos
+  const duracionMs = dto.fechaHoraFin.getTime() - dto.fechaHoraInicio.getTime();
+
+  if (duracionMs > cuatroHorasEnMs) {
+    throw new DomainValidationError(
+      'La duración de la reserva no puede exceder las 4 horas consecutivas (máximo 240 minutos).',
+      422
+    );
   }
 
   const dosHorasEnMs = 2 * 60 * 60 * 1000;
