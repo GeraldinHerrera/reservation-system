@@ -1,18 +1,8 @@
 import { EstadoReserva, Reserva, CrearReservaDTO } from './types';
 
-export class DomainValidationError extends Error {
-  constructor(public override message: string, public statusCode: number = 422) {
-    super(message);
-    this.name = 'DomainValidationError';
-  }
-}
+import { DomainValidationError, ConflictError } from '../../shared/errors';
+export { DomainValidationError, ConflictError };
 
-export class ConflictError extends Error {
-  constructor(public override message: string, public statusCode: number = 409) {
-    super(message);
-    this.name = 'ConflictError';
-  }
-}
 
 /**
  * Valida si un nuevo rango de fechas se solapa con una reserva existente.
@@ -45,8 +35,9 @@ export function crearReserva(
   dto: CrearReservaDTO,
   reservasExistentesDelEspacio: Reserva[] = [],
   ahora: Date = new Date(),
-  generarId: () => string = () => `res-${Date.now()}`
+  generarId: () => string = () => `res-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
 ): Reserva {
+
   if (dto.fechaHoraFin.getTime() <= dto.fechaHoraInicio.getTime()) {
     throw new DomainValidationError('La fecha de fin debe ser posterior a la fecha de inicio.', 422);
   }
